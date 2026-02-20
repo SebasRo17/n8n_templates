@@ -1,0 +1,205 @@
+{
+  "name": "WORKFLOW APAGAR",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 23,
+              "triggerAtMinute": 59
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [32, 112],
+      "id": "7f07e83d-0fe6-4a82-a5bf-d5be52aebf69",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [256, 112],
+      "id": "b2a4d1a0-65b5-4eec-8994-745783fdb427",
+      "name": "APAGAR BUS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 112],
+      "id": "7626143b-4b22-431a-9c50-6dd23aea56e1",
+      "name": "APAGAR BUS RESUMEN"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [704, 112],
+      "id": "50aa08c5-6155-4505-85da-e0d79bef8a14",
+      "name": "APAGAR REACTIVACIONES"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [928, 112],
+      "id": "531e1f3d-ae60-47bf-b655-c6cd51f0b501",
+      "name": "APAGAR REACTIVACIONES RESUMEN"
+    },
+    {
+      "parameters": {
+        "command": "rm /tmp/mensajeEcuanet.lock"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1120, 128],
+      "id": "664dfba9-dace-4651-896d-d19fe894ac54",
+      "name": "BORRAR ARCHIVO2"
+    },
+    {
+      "parameters": {
+        "command": "rm /tmp/mensajeMegadatos.lock"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1344, 128],
+      "id": "6de9a10c-c8b8-4a13-8933-0bf920988bf0",
+      "name": "BORRAR ARCHIVO3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "APAGAR BUS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APAGAR BUS": {
+      "main": [
+        [
+          {
+            "node": "APAGAR BUS RESUMEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APAGAR BUS RESUMEN": {
+      "main": [
+        [
+          {
+            "node": "APAGAR REACTIVACIONES",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APAGAR REACTIVACIONES": {
+      "main": [
+        [
+          {
+            "node": "APAGAR REACTIVACIONES RESUMEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORRAR ARCHIVO2": {
+      "main": [
+        [
+          {
+            "node": "BORRAR ARCHIVO3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APAGAR REACTIVACIONES RESUMEN": {
+      "main": [
+        [
+          {
+            "node": "BORRAR ARCHIVO2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "29e9cb49-caeb-4059-b484-618cfd76e12b",
+  "meta": {
+    "instanceId": ""
+  },
+  "id": "SjKk7tfTXgppvlST",
+  "tags": []
+}

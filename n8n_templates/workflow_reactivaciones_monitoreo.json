@@ -1,0 +1,476 @@
+{
+  "name": "WORKFLOW reactivaciones",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": 1,
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "6fa62bd3-3911-4962-a142-c95ad972ab8c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Primer query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0a85c279-22ff-49d9-979e-7e7213b42eec",
+                    "leftValue": 1,
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segundo query"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-16, 144],
+      "id": "0379dafa-faaa-4859-aa71-e6f183a37d47",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "query": "=SELECT\n    estado,\n    COUNT(*) AS cantidad,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END AS empresa,\n    tipo_proceso\nFROM (\n    SELECT\n        CASE \n            WHEN ipmd.estado = 'Fallo' AND ipp.estado = 'Activo' THEN 'Activo'\n            ELSE ipmd.estado\n        END AS estado,\n        ipmc.empresa_id,\n        ipmc.tipo_proceso\n    FROM\n        db_infraestructura.info_proceso_masivo_det ipmd\n    JOIN\n        db_infraestructura.info_proceso_masivo_cab ipmc ON ipmc.id_proceso_masivo_cab = ipmd.proceso_masivo_cab_id\n    JOIN\n        db_comercial.info_punto ipp ON ipp.id_punto = ipmd.punto_id\n    WHERE\n        ipmd.fe_creacion BETWEEN TO_TIMESTAMP('{{ $json.fecha_inicio }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND TO_TIMESTAMP('{{ $json.fecha_fin }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND ipmc.tipo_proceso = 'ReconectarCliente'\n        AND ipmc.empresa_id IN (18,33)\n) subquery\nGROUP BY\n    estado,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END,\n    tipo_proceso"
+      },
+      "type": "n8n-nodes-oracle-database-parameterization.Oracle Database with Parameterization",
+      "typeVersion": 1,
+      "position": [208, 48],
+      "id": "6665c43f-3ce7-4256-981e-a224223f4387",
+      "name": "Query 1 - Resumen",
+      "credentials": {
+        "oracleCredentials": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "897bdfb0-7e40-422a-b224-0fb11a5b8f4f",
+              "name": "fecha_inicio",
+              "value": "={{ (() => {   \n  const d = new Date();   \n  const dd = String(d.getDate()).padStart(2, '0');   \n  const mm = String(d.getMonth()+1).padStart(2, '0');   \n  const yyyy = d.getFullYear();   \n  return `${dd}/${mm}/${yyyy} 00:00:00`; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "f97db624-dc43-43aa-bb50-34aec49ace96",
+              "name": "fecha_fin",
+              "value": "={{ (() => {   const d = new Date();   const dd = String(d.getDate()).padStart(2, '0');   const mm = String(d.getMonth()+1).padStart(2, '0');   const yyyy = d.getFullYear();   return `${dd}/${mm}/${yyyy} 23:59:59`; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-240, 144],
+      "id": "73e00d3a-0332-41b1-bfc6-1164e153f82b",
+      "name": "SETEAR FECHAS"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Leer las filas del nodo Oracle\nconst rows = $('Query 1 - Resumen').item.json.rows;\n\nlet alerta = false;\n\nfor (const row of rows) {\n  const estado = row.ESTADO;\n  const cantidad = parseInt(String(row.CANTIDAD).replace(',', ''), 10);\n\n  if (estado === 'Pendiente' && cantidad > 200) {\n    alerta = true;\n    break;\n  }\n}\n\nreturn [{ json: { alertaPendientes: alerta } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [432, 48],
+      "id": "d8a6604b-d1f5-431c-b4a6-6bd81d9fa380",
+      "name": "Verificar Pendientes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d6858934-7ec1-4bbd-bf90-690aabdbe74a",
+              "leftValue": "={{$json[\"alertaPendientes\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [656, 48],
+      "id": "d64a5556-50fd-4e58-b87d-43203accb616",
+      "name": "¿Enviar alerta por Pendientes?"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "={{ $json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1104, -48],
+      "id": "4aea5de3-5341-45ac-84da-122f5bd199c4",
+      "name": "Alerta Pendientes",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "=SELECT\n    estado,\n    COUNT(*) AS cantidad,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END AS empresa,\n    tipo_proceso,\n    login,\n    observacion\nFROM (\n    SELECT\n        CASE \n            WHEN ipmd.estado = 'Fallo' AND ipp.estado = 'Activo' THEN 'Activo'\n            ELSE ipmd.estado\n        END AS estado,\n        ipmc.empresa_id,\n        ipmc.tipo_proceso,\n        ipp.login AS login,\n        ipmd.observacion\n    FROM\n        db_infraestructura.info_proceso_masivo_det ipmd\n    JOIN\n        db_infraestructura.info_proceso_masivo_cab ipmc \n        ON ipmc.id_proceso_masivo_cab = ipmd.proceso_masivo_cab_id\n    JOIN\n        db_comercial.info_punto ipp \n        ON ipp.id_punto = ipmd.punto_id\n    WHERE\n        ipmd.fe_creacion BETWEEN TO_TIMESTAMP('{{ $json.fecha_inicio }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND TO_TIMESTAMP('{{ $json.fecha_fin }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND ipmc.tipo_proceso = 'ReconectarCliente'\n        AND ipmc.empresa_id IN (18,33)\n) subquery\nGROUP BY\n    estado,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END,\n    tipo_proceso,\n    login,\n    observacion"
+      },
+      "type": "n8n-nodes-oracle-database-parameterization.Oracle Database with Parameterization",
+      "typeVersion": 1,
+      "position": [208, 336],
+      "id": "e50a9f74-c0fe-4ea9-a0e2-9fc6f286a694",
+      "name": "Query 2 - Fallos",
+      "credentials": {
+        "oracleCredentials": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para escapar caracteres reservados por MarkdownV2\nconst escape = (text) => {\n  return String(text ?? '')\n    .replace(/\\\\/g, '\\\\\\\\') // primero escapamos backslashes\n    .replace(/([_*\\[\\]()~`>#+=|{}.!-])/g, '\\\\$1'); // luego escapamos caracteres especiales\n};\n\n// Traer los datos desde el nodo\nconst rows = $('Query 2 - Fallos').item.json.rows;\n\n// Filtrar solo los fallos\nconst fallos = rows.filter(row => row.ESTADO === 'Fallo');\n\n// Construir el mensaje\nlet mensaje = '*🚨 ERRORES DETECTADOS EN PROCESOS FALLIDOS REACTIVACIONES 🚨*\\n\\n';\n\nfallos.forEach(row => {\n  mensaje +=\n    `*EMPRESA*: \\`${escape(row.EMPRESA)}\\`\\n` +\n    `*CANTIDAD*: \\`${escape(row.CANTIDAD)}\\`\\n` +\n    `*OBSERVACION*: \\`${escape(row.OBSERVACION)}\\`\\n` +\n    `*LOGIN*: \\`${escape(row.LOGIN)}\\`\\n` +\n    '━━━━━━━━━━━━━━━━\\n';\n});\n\nreturn [{ json: { mensaje } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [432, 336],
+      "id": "100dffb4-1514-421b-8c40-bd353b3ee43f",
+      "name": "Filtrar Fallos y unir mensaje"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "={{ $('Filtrar Fallos y unir mensaje').item.json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1104, 240],
+      "id": "2b7c7e55-390a-409c-b1b9-13e166032c5f",
+      "name": "Alerta Fallos",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Revisamos si hay errores tipo \"Fallo\"\nconst rows = $('Query 2 - Fallos').item.json.rows;\nlet banderaTieneFallos = false;\n\nif (rows && rows.some(row => row.ESTADO === 'Fallo')) {\n  banderaTieneFallos = true;\n}\n\nreturn [{ json: { banderaTieneFallos } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [656, 336],
+      "id": "c36d81d1-3507-41d2-9fd9-e1a7099e3185",
+      "name": "Bandera Fallos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d297e678-5257-4930-86f1-8260929b11fd",
+              "leftValue": "={{ $json.banderaTieneFallos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, 336],
+      "id": "eb7dea7b-df8b-466e-b76c-6c1a73032bc7",
+      "name": "¿Enviar alerta por Fallos?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const escape = (text) => {\n  return String(text ?? '')\n    .replace(/\\\\/g, '\\\\\\\\')  // primero escapamos backslash\n    .replace(/([_*\\[\\]()~`>#+=|{}.!-])/g, '\\\\$1');  // luego todos los especiales\n};\n\nconst mensaje = `⚠️ *${escape('Alerta')}*: Se han detectado más de *200 puntos* con estado en REACTIVACIONES \\`${escape('Pendiente')}\\` en el proceso de reconexión\\\\.`;\n\nreturn [{ json: { mensaje } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -48],
+      "id": "60797fe1-a91e-4f60-a9de-ee705fb5db8b",
+      "name": "Formatear Alerta Pendientes"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [880, 144],
+      "id": "51111ff9-de56-4730-83db-71551c616a80",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "=✅ *Reactivaciones* no existe ningun *fallo* ",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1104, 432],
+      "id": "916c1ac2-cfb9-4ab5-8398-49aeb910850a",
+      "name": "Alerta Fallos1",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-464, 144],
+      "id": "fee09aa3-fe8a-4857-ab9a-a3818cc0f8ff",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Query 1 - Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query 2 - Fallos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SETEAR FECHAS": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query 1 - Resumen": {
+      "main": [
+        [
+          {
+            "node": "Verificar Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Pendientes": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar alerta por Pendientes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar alerta por Pendientes?": {
+      "main": [
+        [
+          {
+            "node": "Formatear Alerta Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query 2 - Fallos": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Fallos y unir mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Fallos y unir mensaje": {
+      "main": [
+        [
+          {
+            "node": "Bandera Fallos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerta Fallos": {
+      "main": [[]]
+    },
+    "Bandera Fallos": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar alerta por Fallos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar alerta por Fallos?": {
+      "main": [
+        [
+          {
+            "node": "Alerta Fallos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta Fallos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Alerta Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Alerta Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "SETEAR FECHAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fddf6c92-4af3-4f36-9ea9-06899e680510",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "MuJEmg7rE3QmZrsj",
+  "tags": []
+}

@@ -1,0 +1,247 @@
+{
+  "name": "Workflow bus de pagos",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a85f94e-51b7-4384-9394-3696a795ba5d",
+              "name": "fecha_inicio",
+              "value": "={{ (() => {   \n  const d = new Date();   \n  const dd = String(d.getDate()).padStart(2, '0');   \n  const mm = String(d.getMonth()+1).padStart(2, '0');   \n  const yyyy = d.getFullYear();   \n  return `${dd}/${mm}/${yyyy} 00:00:00`; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "5011d2f4-b362-4de9-a95a-cebdeb3facdb",
+              "name": "fecha_fin",
+              "value": "={{ (() => {   const d = new Date();   const dd = String(d.getDate()).padStart(2, '0');   const mm = String(d.getMonth()+1).padStart(2, '0');   const yyyy = d.getFullYear();   return `${dd}/${mm}/${yyyy} 23:59:59`; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-464, -288],
+      "id": "51c9b1cc-ed2a-4612-96d4-8ff3fc7f7f30",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "query": "=SELECT \n    x.usuario_bus, \n    x.cantidad,\n    CASE x.EMPRESA_ID \n        WHEN 1 THEN 'Megadatos' \n        WHEN 21 THEN 'Ecuanet' \n        ELSE TO_CHAR(x.EMPRESA_ID) \n    END AS empresa\nFROM (\n    SELECT  \n        iee.usuario_bus,\n        iee.empresa_id,\n        COUNT(*) AS cantidad\n    FROM  \n        DB_BUSPAGOS.info_pago ipa, \n        DB_BUSPAGOS.info_entidad_rec_empresa iee\n    WHERE  \n        ipa.entidad_rec_empresa_id = iee.id_entidad_rec_empresa\n        AND ipa.fe_creacion BETWEEN TO_TIMESTAMP('{{ $json.fecha_inicio }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND (SYSDATE - ((iee.tiempo_esp_conci * 2 + 1) / 1440))\n        AND ipa.estado IN ('Pendiente')\n    GROUP BY  \n        iee.usuario_bus, \n        iee.empresa_id\n) x\n"
+      },
+      "type": "n8n-nodes-oracle-database-parameterization.Oracle Database with Parameterization",
+      "typeVersion": 1,
+      "position": [-240, -288],
+      "id": "6e78be82-a597-46d0-8b3d-a72b0b583745",
+      "name": "CONSULTA",
+      "credentials": {
+        "oracleCredentials": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener las filas del nodo \"CANTIDAD DE FALLOS\"\nconst rows = $('CONSULTA').item.json.rows;\n\n// Inicializar bandera\nlet banderaTieneRows = false;\n\n// Si rows no está vacío → true\nif (rows && rows.length > 0) {\n  banderaTieneRows = true;\n}\n\n// Retornar la bandera como salida\nreturn [{ json: { banderaTieneRows } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, -288],
+      "id": "19cfccad-faaa-42e3-9ab8-09390d46c3b4",
+      "name": "BANDERA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7be3eb60-ba79-4d93-82b3-c66624f5302d",
+              "leftValue": "={{ $json.banderaTieneRows }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [432, -288],
+      "id": "eda90285-c4da-4d57-80de-79c480219c9a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "={{ $('Unir mensaje').item.json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [656, -384],
+      "id": "e64ea597-7d6f-4468-bd24-d499c651ac67",
+      "name": "Send a text message1",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para escapar caracteres reservados por MarkdownV2 de Telegram\nconst escape = (text) => {\n  return String(text ?? '')\n    .replace(/([_*\\[\\]()~`>#+\\-=|{}.!\\\\])/g, '\\\\$1'); // escapamos TODOS los reservados, incluyendo el punto\n};\n\n// Obtener los datos del nodo Oracle\nconst rows = $('CONSULTA').item.json.rows;\n\n// Construir mensaje con cabecera\nlet mensaje = '*🚨 Inconvenientes en el bus de pagos 🚨*\\n\\n';\n\n// Recorrer filas y formatear cada registro\nrows.forEach((row, index) => {\n  mensaje += `*${index + 1}*️⃣\\n`;\n  mensaje += `• *Usuario\\\\_bus*: \\`${escape(row.USUARIO_BUS)}\\`\\n`;\n  mensaje += `• *Cantidad*: \\`${escape(row.CANTIDAD)}\\`\\n`;\n  mensaje += `• *Empresa*: \\`${escape(row.EMPRESA)}\\`\\n`;\n  mensaje += '━━━━━━━━━━━━━━━\\n';\n});\n\nreturn [{ json: { mensaje } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-16, -288],
+      "id": "812e1439-24e9-4bca-880d-f7987fe492b8",
+      "name": "Unir mensaje"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "=✅ *El Bus de Pagos* está funcionando de forma *correcta* 🚀",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [656, -192],
+      "id": "94018a4b-8da7-4657-ba9f-f77b4c684e74",
+      "name": "Send a text message",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-688, -288],
+      "id": "69684ef4-5ad1-48b3-8c3f-d810985eb5cb",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "CONSULTA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CONSULTA": {
+      "main": [
+        [
+          {
+            "node": "Unir mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BANDERA": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir mensaje": {
+      "main": [
+        [
+          {
+            "node": "BANDERA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [[]]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "133eef6e-6d22-4629-a8d4-ce2054adafbc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "WXixIDM5PeB1KOU8",
+  "tags": []
+}

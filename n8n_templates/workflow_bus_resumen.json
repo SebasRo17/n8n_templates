@@ -1,0 +1,320 @@
+{
+  "name": "BUS RESUMEN",
+  "nodes": [
+    {
+      "parameters": {
+        "query": "=SELECT\n    a.usr_creacion,\n    CASE iee.empresa_id\n      WHEN 1  THEN 'Megadatos'\n      WHEN 21 THEN 'Ecuanet'\n      ELSE TO_CHAR(iee.empresa_id)\n    END AS empresa,\n    SUM(CASE WHEN d.estado_transaccion='Conciliado' THEN 1 ELSE 0 END) AS conciliado,\n    SUM(CASE WHEN d.estado_transaccion='Pendiente'  THEN 1 ELSE 0 END) AS pendiente,\n    SUM(CASE WHEN d.estado_transaccion='Eliminado'  THEN 1 ELSE 0 END) AS reversado,\n    SUM(CASE WHEN d.estado_transaccion='Anulado'  THEN 1 ELSE 0 END) AS anulado,\n    SUM(CASE WHEN d.estado_transaccion='Pre-Anulado'  THEN 1 ELSE 0 END) AS preanulado,\n    SUM(CASE WHEN d.estado_transaccion='Finalizado'  THEN 1 ELSE 0 END) AS finalizado\n   -- COUNT(*) AS total\nFROM DB_BUSPAGOS.info_pago a\nJOIN DB_BUSPAGOS.info_pago_detalle d ON a.id_pago = d.pago_id\nJOIN DB_BUSPAGOS.info_entidad_rec_empresa iee ON a.entidad_rec_empresa_id = iee.id_entidad_rec_empresa\nWHERE a.fe_creacion\n    BETWEEN TO_TIMESTAMP('{{ $('Edit Fields').item.json.fecha_inicio }}', 'DD/MM/YYYY HH24:MI:SS')\n      AND (sysdate-((iee.tiempo_esp_conci*2+1)/1440))\nGROUP BY a.usr_creacion,\n         CASE iee.empresa_id\n           WHEN 1 THEN 'Megadatos'\n           WHEN 21 THEN 'Ecuanet'\n           ELSE TO_CHAR(iee.empresa_id)\n         END\nORDER BY empresa,a.usr_creacion"
+      },
+      "type": "n8n-nodes-oracle-database-parameterization.Oracle Database with Parameterization",
+      "typeVersion": 1,
+      "position": [496, -416],
+      "id": "8b85eb1c-cad1-43f6-8e33-bc590c33fba2",
+      "name": "INFO BUS",
+      "credentials": {
+        "oracleCredentials": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del nodo INFO BUS\nconst rows = $('INFO BUS').item.json.rows;\n\n// Ajustar hora local: restar 3 horas\nconst fechaLocal = new Date();\nfechaLocal.setHours(fechaLocal.getHours() - 5); // ✅ restamos 3 horas\n\n// Obtener fecha local en formato YYYY-MM-DD\nconst fecha = fechaLocal.toISOString().split('T')[0];\n\n// Armamos el mensaje principal\nlet mensaje = `*📅 Fecha:* \\`${fecha}\\`\\n*📡 Informacion del estado del Bus de Pagos 📡*\\n\\n`;\n\nrows.forEach((row) => {\n  mensaje += '```'; // abrimos bloque monoespaciado\n  mensaje += `Entidad:      ${row.USR_CREACION}\\n`;\n  mensaje += `Empresa:      ${row.EMPRESA}\\n`;\n  mensaje += `Conciliados:  ${row.CONCILIADO}\\n`;\n  mensaje += `Pendientes:   ${row.PENDIENTE}\\n`;\n  mensaje += `Reversados:   ${row.REVERSADO}\\n`;\n  mensaje += '```\\n';\n});\n\nreturn [{ json: { mensaje } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, -416],
+      "id": "6d1a6457-0ebd-4ba0-8db3-be316f714d43",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "={{ $('Code').item.json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2288, -416],
+      "id": "83523fac-6bfc-47fc-a317-ec203760c47e",
+      "name": "Send a text message2",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a85f94e-51b7-4384-9394-3696a795ba5d",
+              "name": "fecha_inicio",
+              "value": "={{ (() => {   \n  const d = new Date();   \n  const dd = String(d.getDate()).padStart(2, '0');   \n  const mm = String(d.getMonth()+1).padStart(2, '0');   \n  const yyyy = d.getFullYear();   \n  return `${dd}/${mm}/${yyyy} 00:00:00`; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "5011d2f4-b362-4de9-a95a-cebdeb3facdb",
+              "name": "fecha_fin",
+              "value": "={{ (() => {   const d = new Date();   const dd = String(d.getDate()).padStart(2, '0');   const mm = String(d.getMonth()+1).padStart(2, '0');   const yyyy = d.getFullYear();   return `${dd}/${mm}/${yyyy} 23:59:59`; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [272, -416],
+      "id": "4205d9f8-1301-4026-94b5-7e14f5f977e3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del nodo INFO BUS\nconst rows = $('INFO BUS').item.json.rows;\n\n// Filtrar solo los registros con empresa 'Ecuanet'\nconst filtrados = rows.filter(row => row.EMPRESA === 'Ecuanet');\n\n// Agrupamos por entidad\nconst labels = [];\nconst conciliados = [];\nconst pendientes = [];\nconst reversados = [];\n\n// Rellenamos arrays con los datos filtrados\nfiltrados.forEach(row => {\n  labels.push(row.USR_CREACION);\n  conciliados.push(parseInt(row.CONCILIADO));\n  pendientes.push(parseInt(row.PENDIENTE));\n  reversados.push(parseInt(row.REVERSADO));\n});\n\n// Fecha para el título\nconst fechaLocal = new Date();\nfechaLocal.setHours(fechaLocal.getHours() - 5);\nconst fecha = fechaLocal.toISOString().split('T')[0];\n\n// Creamos el objeto Chart.js para QuickChart\nconst chartConfig = {\n  type: 'bar',\n  data: {\n    labels,\n    datasets: [\n      {\n        label: 'Conciliados',\n        data: conciliados,\n        backgroundColor: 'rgba(54, 162, 235, 0.7)',\n      },\n      {\n        label: 'Pendientes',\n        data: pendientes,\n        backgroundColor: 'rgba(255, 206, 86, 0.7)',\n      },\n      {\n        label: 'Reversados',\n        data: reversados,\n        backgroundColor: 'rgba(255, 99, 132, 0.7)',\n      },\n    ],\n  },\n  options: {\n    title: {\n      display: true,\n      text: `Estado del Bus de Pagos - Ecuanet (${fecha})`,\n    },\n    scales: {\n      xAxes: [{ stacked: true }],\n      yAxes: [{ stacked: true }],\n    },\n    legend: {\n      display: true,\n      position: 'right',\n      align: 'top',\n    },\n  },\n};\n\n// Retornamos el payload como JSON\nreturn [{\n  json: {\n    chart: chartConfig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [944, -416],
+      "id": "c3c722d3-d72e-4b48-8352-4bcd7a2f21f5",
+      "name": "GRAFICO"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "={{$json[\"chart\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1168, -416],
+      "id": "12a48966-ceb8-40e8-aa09-a92b1a66badd",
+      "name": "Generar Grafico"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1392, -416],
+      "id": "a7367f7c-002c-44d3-9172-2c47742f74db",
+      "name": "Send a photo message",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener los datos del nodo INFO BUS\nconst rows = $('INFO BUS').item.json.rows;\n\n// Filtrar solo los registros con empresa 'Ecuanet'\nconst filtrados = rows.filter(row => row.EMPRESA === 'Megadatos');\n\n// Agrupamos por entidad\nconst labels = [];\nconst conciliados = [];\nconst pendientes = [];\nconst reversados = [];\n\n// Rellenamos arrays con los datos filtrados\nfiltrados.forEach(row => {\n  labels.push(row.USR_CREACION);\n  conciliados.push(parseInt(row.CONCILIADO));\n  pendientes.push(parseInt(row.PENDIENTE));\n  reversados.push(parseInt(row.REVERSADO));\n});\n\n// Fecha para el título\nconst fechaLocal = new Date();\nfechaLocal.setHours(fechaLocal.getHours() - 5);\nconst fecha = fechaLocal.toISOString().split('T')[0];\n\n// Creamos el objeto Chart.js para QuickChart\nconst chartConfig = {\n  type: 'bar',\n  data: {\n    labels,\n    datasets: [\n      {\n        label: 'Conciliados',\n        data: conciliados,\n        backgroundColor: 'rgba(54, 162, 235, 0.7)',\n      },\n      {\n        label: 'Pendientes',\n        data: pendientes,\n        backgroundColor: 'rgba(255, 206, 86, 0.7)',\n      },\n      {\n        label: 'Reversados',\n        data: reversados,\n        backgroundColor: 'rgba(255, 99, 132, 0.7)',\n      },\n    ],\n  },\n  options: {\n    title: {\n      display: true,\n      text: `Estado del Bus de Pagos - Megadatos (${fecha})`,\n    },\n    scales: {\n      xAxes: [{ stacked: true }],\n      yAxes: [{ stacked: true }],\n    },\n    legend: {\n      display: true,\n      position: 'right',\n      align: 'top',\n    },\n  },\n};\n\n// Retornamos el payload como JSON\nreturn [{\n  json: {\n    chart: chartConfig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1616, -416],
+      "id": "9effd67b-64e7-495e-b0df-a500f7f0a57a",
+      "name": "GRAFICO1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "={{$json[\"chart\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1840, -416],
+      "id": "ca82276d-41a0-4eed-b1a5-65abac78bec2",
+      "name": "Generar Grafico1"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2064, -416],
+      "id": "05bcc7c0-d0bc-41f8-880c-71a1d88e1d7c",
+      "name": "Send a photo message1",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [48, -416],
+      "id": "3995a1f8-5aa6-4918-8791-69af756ae0f7",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "INFO BUS": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "GRAFICO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "INFO BUS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GRAFICO": {
+      "main": [
+        [
+          {
+            "node": "Generar Grafico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Grafico": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a photo message": {
+      "main": [
+        [
+          {
+            "node": "GRAFICO1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GRAFICO1": {
+      "main": [
+        [
+          {
+            "node": "Generar Grafico1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Grafico1": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a photo message1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1d9e2b01-f535-4af9-9732-b61b92a264ac",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "S7rorpxCy0yZDRZS",
+  "tags": []
+}

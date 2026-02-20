@@ -1,0 +1,153 @@
+{
+  "name": "Workflow resumen",
+  "nodes": [
+    {
+      "parameters": {
+        "query": "=SELECT\n    estado,\n    COUNT(*) AS cantidad,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END AS empresa,\n    tipo_proceso\nFROM (\n    SELECT\n        CASE \n            WHEN ipmd.estado = 'Fallo' AND ipp.estado = 'Activo' THEN 'Activo'\n            ELSE ipmd.estado\n        END AS estado,\n        ipmc.empresa_id,\n        ipmc.tipo_proceso\n    FROM\n        db_infraestructura.info_proceso_masivo_det ipmd\n    JOIN\n        db_infraestructura.info_proceso_masivo_cab ipmc ON ipmc.id_proceso_masivo_cab = ipmd.proceso_masivo_cab_id\n    JOIN\n        db_comercial.info_punto ipp ON ipp.id_punto = ipmd.punto_id\n    WHERE\n        ipmd.fe_creacion BETWEEN TO_TIMESTAMP('{{ $json.fecha_inicio }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND TO_TIMESTAMP('{{ $json.fecha_fin }}', 'DD/MM/YYYY HH24:MI:SS')\n        AND ipmc.tipo_proceso = 'ReconectarCliente'\n        AND ipmc.empresa_id IN (18,33)\n) subquery\nGROUP BY\n    estado,\n    CASE empresa_id\n        WHEN 18 THEN 'Megadatos'\n        WHEN 33 THEN 'Ecuanet'\n    END,\n    tipo_proceso"
+      },
+      "type": "n8n-nodes-oracle-database-parameterization.Oracle Database with Parameterization",
+      "typeVersion": 1,
+      "position": [-1328, -32],
+      "id": "b2e1994f-d075-4bab-85e4-7919887867ef",
+      "name": "Query 1 - Resumen",
+      "credentials": {
+        "oracleCredentials": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Función para escapar caracteres reservados por MarkdownV2 de Telegram\nconst escape = (text) => {\n  return String(text ?? '')\n    .replace(/\\\\/g, '\\\\\\\\')  // escapamos backslashes\n    .replace(/([_*\\[\\]()~`>#+=|{}.!-])/g, '\\\\$1'); // escapamos caracteres MarkdownV2\n};\n\n// Obtener los datos de Oracle\nconst rows = $('Query 1 - Resumen').item.json.rows;\n\n// Agrupar por empresa\nconst empresas = {};\nrows.forEach(row => {\n  const empresa = escape(row.EMPRESA);\n  if (!empresas[empresa]) {\n    empresas[empresa] = [];\n  }\n  empresas[empresa].push({\n    estado: escape(row.ESTADO),\n    cantidad: escape(row.CANTIDAD)\n  });\n});\n\n// ✅ Ajustar hora local restando 3 horas\nconst fechaLocal = new Date();\nfechaLocal.setHours(fechaLocal.getHours() - 5); // ← Ajuste manual zona horaria\nconst fecha = fechaLocal.toISOString().split('T')[0]; // ej: 2025-09-09\n\n// Construir mensaje formateado\nlet mensaje = `*📅 Fecha:* \\`${fecha}\\`\\n*📊 Resumen de Reconexion*\\n\\n`;\n\nObject.keys(empresas).forEach(empresa => {\n  mensaje += `*🏢 Empresa*: \\`${empresa}\\`\\n`;\n  empresas[empresa].forEach(item => {\n    mensaje += `• *Estado*: \\`${item.estado}\\`\\n` +\n               `  *Cantidad*: \\`${item.cantidad}\\`\\n\\n`;\n  });\n  mensaje += '━━━━━━━━━━━━━━━━━━━━━━━\\n'; // separador por empresa\n});\n\nreturn [{ json: { mensaje } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1104, -32],
+      "id": "c70149c3-44ee-476d-88a8-5eab597e7915",
+      "name": "Formatear Resumen Diario"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "={{ $json.mensaje }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-880, -32],
+      "id": "507a76e5-81d7-496e-bf01-2604329e4eb4",
+      "name": "Resumen dario",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "897bdfb0-7e40-422a-b224-0fb11a5b8f4f",
+              "name": "fecha_inicio",
+              "value": "={{ (() => {   \n  const d = new Date();   \n  const dd = String(d.getDate()).padStart(2, '0');   \n  const mm = String(d.getMonth()+1).padStart(2, '0');   \n  const yyyy = d.getFullYear();   \n  return `${dd}/${mm}/${yyyy} 00:00:00`; \n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "f97db624-dc43-43aa-bb50-34aec49ace96",
+              "name": "fecha_fin",
+              "value": "={{ (() => {   const d = new Date();   const dd = String(d.getDate()).padStart(2, '0');   const mm = String(d.getMonth()+1).padStart(2, '0');   const yyyy = d.getFullYear();   return `${dd}/${mm}/${yyyy} 23:59:59`; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-1552, -32],
+      "id": "5fc8ad45-7a8b-4d72-a16b-c871d8fa247e",
+      "name": "SETEAR FECHAS"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1776, -32],
+      "id": "72dae70c-9f48-4a95-be1c-afb295055de6",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Query 1 - Resumen": {
+      "main": [
+        [
+          {
+            "node": "Formatear Resumen Diario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Resumen Diario": {
+      "main": [
+        [
+          {
+            "node": "Resumen dario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SETEAR FECHAS": {
+      "main": [
+        [
+          {
+            "node": "Query 1 - Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "SETEAR FECHAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d95e9645-b1e2-4692-b624-9cd0bf0db66d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "0mZjIIYT9Ct4Ar57",
+  "tags": []
+}
