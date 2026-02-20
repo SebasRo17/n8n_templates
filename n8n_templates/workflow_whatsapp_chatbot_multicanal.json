@@ -1,0 +1,1653 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('input_data').item.json.input }}",
+        "options": {
+          "systemMessage": "=# 🔹 ROL (AGENTE n8n)\n\nSos un **agente comercial académico profesional**, cálido, humano y estratégico, con más de 5 años de experiencia en **ventas consultivas de servicios de tesis**.\n\n⚠️ **NO tenés memoria persistente.**\n⚠️ **NO asumís información.**\n⚠️ **TODO lo validás usando herramientas (tools).**\n\nTrabajás dentro de un **flujo automatizado en n8n**, por lo que **cada acción debe estar explícitamente justificada y ejecutada mediante una tool antes de responder al cliente**.\n\n---\n\n# 🔹 OBJETIVO GENERAL\n\nGestionar conversaciones comerciales **de forma estructurada y controlada**, desde el primer mensaje hasta el cierre, asegurando:\n\n* Uso correcto de tools\n* Recolección progresiva de información\n* Seguimiento comercial actualizado en Sheets\n* Cotizaciones solo cuando el alcance esté 100% definido\n\n---\n\n# 🔹 TOOLS DISPONIBLES (USO OBLIGATORIO EN n8n)\n\n⚠️ **Regla global:**\n👉 **NUNCA respondas un mensaje del cliente sin ejecutar al menos UNA tool antes.**\n\n---\n\n## 🧰 TOOL: `seguimiento` (Google Sheets – n8n)\n\n📌 **TOOL PRIORITARIA – SE EJECUTA SIEMPRE**\n\nColumnas:\n\n* Numero\n* Nombre\n* Apellido\n* Ciudad\n* Servicio\n* Ultimo mensaje\n* Status\n\n### 🔴 REGLA ABSOLUTA (n8n)\n\n**ANTE CADA MENSAJE DEL CLIENTE, ANTES DE RESPONDER:**\n\n1. Ejecutás `seguimiento`\n2. Actualizás:\n\n   * `Ultimo mensaje` → resumen corto del mensaje recibido\n   * `Status` → estado actual de la conversación\n3. Si hay datos nuevos:\n\n   * Actualizás la columna correspondiente\n\n❌ Si no ejecutás esta tool → **la respuesta es inválida**\n\n---\n\n## 🧰 TOOL: `clientes`\n\n* Uso:\n\n  * Consultar servicios\n  * Alcances generales\n  * Procesos estándar\n* Regla n8n:\n\n  * **Si el cliente pregunta “qué hacen”, “qué servicios hay”, “cómo trabajan” → DEBÉS ejecutar esta tool antes de responder.**\n\n---\n\n## 🧰 TOOL: `info`\n\n* Uso:\n\n  * Recolectar información académica antes de cotizar\n* Regla n8n:\n\n  * Se usa **cuando el cliente ya indicó un servicio**\n  * Una pregunta por mensaje\n  * En orden estricto\n* ❌ Nunca hablar de precios sin ejecutar esta tool\n\n---\n\n## 🧰 TOOL: `promociones`\n\n* Uso:\n\n  * Validar promociones reales\n* Regla n8n:\n\n  * Solo se ejecuta cuando ya conocés:\n\n    * Servicio\n    * Ciudad\n    * Tipo de trabajo (teórico / práctico)\n* ❌ Nunca inventes descuentos\n\n---\n\n# 🔹 FLUJO CONVERSACIONAL OBLIGATORIO (n8n)\n\n## 1️⃣ Recepción del mensaje\n\n👉 **Siempre primero:**\n\n* Ejecutar `seguimiento`\n* Actualizar `Ultimo mensaje` + `Status`\n\n---\n\n## 2️⃣ Saludo (CORREGIDO)\n\n* ✅ Si el cliente saluda → **DEBÉS saludar**\n* ❌ Si no saluda → respondés directo, cordial\n\nEjemplo válido:\n\n> “Hola, un gusto saludarte 😊”\n\n---\n\n## 3️⃣ Datos iniciales (BLOQUEANTE)\n\n🎯 Objetivo:\n\n* Obtener **Nombre**\n* Obtener **Ciudad**\n\n❌ No hablás de servicios\n❌ No hablás de precios\n❌ No explicás procesos\n\nMensaje modelo:\n\n> “Para poder ayudarte mejor, ¿me indicás tu nombre y la ciudad desde donde te contactás?”\n\n---\n\n## 4️⃣ Presentación de servicios\n\n👉 Solo si Nombre y Ciudad están completos en `seguimiento`\n\nAcción n8n:\n\n* Ejecutar `seguimiento` (update Status)\n\nMensaje:\n\n> “Contamos con los siguientes servicios:\n>\n> * Propuesta de temas de tesis\n> * Aplicación de normas APA\n> * Desarrollo completo de tesis\n> * Correcciones de tesis\n>   ¿Cuál de estos servicios te interesa y para qué carrera?”\n\n---\n\n## 5️⃣ Identificación CAAP-AAA (CRÍTICO)\n\nCuando el cliente indica carrera/servicio:\n\nDeterminás si el trabajo es:\n\n### Parte teórica\n\n* Investigación\n* Redacción\n* Sin simulaciones ni cálculos\n\n### Parte práctica\n\n* Software\n* Simulaciones\n* Planos\n* Cálculos\n* Modelos matemáticos / estadísticos\n\n⚠️ **Siempre preguntar parte práctica si la carrera es:**\n\n* Sistemas / Informática\n* Arquitectura\n* Ing. Civil\n* Ambiental\n* Mecánica\n* Diseño gráfico\n\n---\n\n## 6️⃣ Recolección de info (tool `info`)\n\n👉 Ejecutás `info`\n👉 Una pregunta por mensaje\n👉 Sin precios\n\nEjemplos:\n\n* ¿Tiene tema aprobado?\n* ¿Le solicitaron plan o anteproyecto?\n* ¿Cuenta con formato?\n* ¿Fechas de entrega?\n\n---\n\n## 7️⃣ Cotización\n\n✅ Solo si:\n\n* Info completa\n* Alcance definido\n* Parte teórica / práctica clara\n\nAcciones n8n:\n\n1. Ejecutar `promociones`\n2. Ejecutar `seguimiento` (Status → En proceso de cierre)\n3. Enviar cotización (idealmente audio)\n\n---\n\n# 🔹 STATUS PERMITIDOS (n8n)\n\n* Nuevo contacto\n* Datos iniciales obtenidos\n* Interesado\n* En seguimiento\n* En proceso de cierre\n* Cliente activo\n\n---\n\n# 🔹 REGLAS NO NEGOCIABLES (n8n)\n\n* ❌ Nunca respondas sin ejecutar una tool\n* ❌ Nunca ignores un saludo\n* ❌ Nunca cotices sin info completa\n* ❌ Nunca inventes datos\n* ✅ Sheets siempre actualizado\n* ✅ Español latino\n* ✅ Mensajes claros y humanos\n\n---\n\n# 🔹 EJEMPLO CORRECTO (n8n)\n\n**Cliente:**\n\n> “Hola, quiero información”\n\n**Paso 1 – Tool (`seguimiento`):**\n\n* Ultimo mensaje: “Solicita información”\n* Status: “Nuevo contacto”\n\n**Paso 2 – Respuesta:**\n\n> “Hola, un gusto saludarte 😊\n> Para poder ayudarte mejor, ¿me indicás tu nombre y la ciudad desde donde te contactás?”"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [2256, 48],
+      "id": "a516f470-198d-4275-b307-701a6ed29ef9",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [2000, 272],
+      "id": "f1acc803-b369-47a5-8a29-7c9e086d6621",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1864802162,
+          "mode": "list",
+          "cachedResultName": "Promociones",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [2320, 288],
+      "id": "a1235f8e-9a0e-4115-b227-108a76415ab0",
+      "name": "Promociones",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1619373773,
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [2464, 288],
+      "id": "d7aea6b5-9eb0-4fa9-a5b0-1c5e7034bb8f",
+      "name": "Clientes",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1364846329,
+          "mode": "list",
+          "cachedResultName": "Informacion",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [2592, 288],
+      "id": "de8d3285-700b-4ec6-9723-b501a6acbec8",
+      "name": "Info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"sessionId\": \"{{ $json.message.chat.id }}\",\n  \"debounce\": {\n    \"keyPrefix\": \"telegram-chat-bot\",\n    \"windowSeconds\": 15,\n    \"timezone\": \"America/New_York\"\n  },\n  \"provider\": {\n    \"name\": \"telegram\",\n    \"channel\": \"telegram_chat\"\n  },\n  \"conversation\": {\n    \"id\": \"{{ $json.message.chat.id }}\"\n  },\n  \"sender\": {\n    \"id\": \"{{ $json.message.chat.id }}\",\n    \"name\": \"{{ $json.message.chat.first_name }}\"\n  },\n  \"message\": {\n    \"id\": \"{{ $json.message.message_id }}\",\n    \"type\": \"{{ $json.message.text ? 'text' : 'image' }}\",\n    \"text\": \"{{ $json.message.text }}\",\n    \"media\": null\n  },\n  \"timestamps\": {\n    \"receivedAt\": \"{{ $json.message.date }}\"\n  },\n  \"env\": \"dev\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-1584, 432],
+      "id": "ca24fbe5-da5c-4755-8ad8-6a6137a147bb",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6149ca32-2e74-4399-9e4c-af4ee4423d5c",
+              "name": "debounceKey",
+              "value": "={{\n  `${$json.debounce.keyPrefix}:` +\n  `${$json.provider.name}:` +\n  `${$json.provider.channel}:` +\n  `${$json.env}:` + \n  `${$json.conversation.id}`\n}}",
+              "type": "string"
+            },
+            {
+              "id": "b745637f-d9c4-4d7d-b6c6-3612c58b20a5",
+              "name": "debounceValue",
+              "value": "={{ $json.message.toJsonString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-912, 432],
+      "id": "31444812-57ae-47f5-a72e-bfa658332d80",
+      "name": "debounce_data"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"sessionId\": \"{{ $('Normalize Input').item.json.sessionId }}\",\n  \"debounce\": {\n    \"keyPrefix\": \"telegram-chat-bot\",\n    \"windowSeconds\": 15,\n    \"timezone\": \"America/New_York\"\n  },\n  \"provider\": {\n    \"name\": \"telegram\",\n    \"channel\": \"telegram_chat\"\n  },\n  \"conversation\": {\n    \"id\": \"{{ $('Normalize Input').item.json.message.chat.id }}\"\n  },\n  \"sender\": {\n    \"id\": \"{{ $('Normalize Input').item.json.sender.id}}\",\n    \"name\": \"{{ $('Normalize Input').item.json.sender.name }}\"\n  },\n  \"message\": {\n    \"id\": \"{{ $('Normalize Input').item.json.message.id }}\",\n    \"type\": \"{{ $('Normalize Input').item.json.message.text ? 'text' : 'image' }}\",\n    \"text\": \"{{ $('Normalize Input').item.json.message.text }}\",\n    \"media\": null,\n    \"date\": \"{{ $json.currentDate }}\"\n  },\n  \"timestamps\": {\n    \"receivedAt\": \"{{ $('Normalize Input').item.json.timestamps.receivedAt }}\"\n  },\n  \"env\": \"dev\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-1136, 432],
+      "id": "0cfe4ed5-54f8-4625-900a-5673848bbd45",
+      "name": "map_data"
+    },
+    {
+      "parameters": {
+        "options": {
+          "timezone": "={{ $json.debounce?.timezone || 'America/New_York' }}"
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [-1360, 432],
+      "id": "95565e4c-cf10-4d7f-95b4-e8bd7836b0f7",
+      "name": "set_current_date"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('debounce_data').item.json.debounceKey }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [-464, 432],
+      "id": "d24089b6-4a49-4ffb-8f1d-5faf5ea922a5",
+      "name": "getData1",
+      "credentials": {
+        "redis": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.debounce?.windowSeconds || 15 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-16, 528],
+      "id": "7277b149-862a-4ae3-b755-8eb3501e9f1d",
+      "name": "Wait1",
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $json.debounceKey }}",
+        "messageData": "={{$json.debounceValue}}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [-688, 432],
+      "id": "7a67d3c6-a497-431f-8702-a1ed9ef44737",
+      "name": "push_data",
+      "credentials": {
+        "redis": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c031771a-b94c-446f-b6b1-4dc1cdea31ef",
+                    "leftValue": "={{ $json.message.last().parseJson().date }}",
+                    "rightValue": "={{ $now.minus($json.debounce?.windowSeconds || 15,'seconds') }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Take"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.message?.last().parseJson().id.toNumber() || '{}') }}",
+                    "rightValue": "={{ $('Normalize Input').item.json.message.id.toNumber() }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "notEquals"
+                    },
+                    "id": "6ff0ed94-bc18-4e06-8e87-9f7013c50d89"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Nothing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "72b23ef1-861f-4660-87e0-f5fceed26bc5",
+                    "leftValue": "={{ JSON.parse($json.message.last()).id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FirstTime"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Controller",
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-240, 304],
+      "id": "a509da31-8fd7-45fe-af32-5e90f10df85e",
+      "name": "message_condition"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-16, 288],
+      "id": "26e0ec49-f9d2-400b-9188-f3b217e96a00",
+      "name": "no_operation"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('debounce_data').item.json.debounceKey }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [-16, 96],
+      "id": "0c97a2e2-4d9b-473b-97d9-29fabd41e72f",
+      "name": "delete_key",
+      "credentials": {
+        "redis": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "2f9854ac-26b3-446c-9d0d-ae25157c61bb",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.input }}",
+                    "rightValue": "="
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f27386d4-1b5a-46a2-b5ff-6205c0a219f1",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "position": [1552, 48],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "date_time"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [880, 48],
+      "id": "30e67a6f-7a83-478f-a964-a7eed1912d47",
+      "name": "Sort1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1104, 48],
+      "id": "a943cc0c-124e-44a6-9470-93d43d13fdda",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "message",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [208, 48],
+      "id": "066b5c03-3228-4884-9a66-7dd8e278ae31",
+      "name": "splitOut1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.parse($json.message) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [432, 48],
+      "id": "600451ac-79db-4b14-b032-88159d871bc2",
+      "name": "parse_json"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1ca6350-539e-406f-a8f5-1deb03699fa6",
+              "name": "message",
+              "value": "={{ $('parse_json').item.json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "35eb54b0-c663-402f-94bf-d4be534135fe",
+              "name": "date_time",
+              "value": "={{ $('parse_json').item.json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [656, 48],
+      "id": "23e65308-5e89-401f-85e4-668db8581f15",
+      "name": "set_message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9993340a-3d13-4c9a-903b-bf7e3103cbdf",
+              "name": "input",
+              "value": "={{ $json.message.join(' ')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1328, 48],
+      "id": "c68f074e-c035-41e2-9a5d-2c899f7612eb",
+      "name": "join_messages"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c698e0f6-eec9-41b2-98a8-067ee62004f3",
+              "name": "input",
+              "value": "={{$json.input}}",
+              "type": "string"
+            },
+            {
+              "id": "f06d4926-9b73-484a-b18f-21fee516b1d5",
+              "name": "sessionId",
+              "value": "={{$('map_data').item.json.sessionId}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1776, 48],
+      "id": "2ff6db7b-d9ff-4a1e-921a-89bb9161d960",
+      "name": "input_data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.message\n\nconst sessionId = $('map_data').first().json.sessionId\n\nconst arr = items.map(item=>{\n  const raw = JSON.parse(item)\n  return raw\n})\n\narr.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));\n\nconst input = arr.map(i => i.text).join(' ');\n\nreturn [{ json: { input,sessionId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1008, 368],
+      "id": "233403ac-8777-4409-8bc3-3753649ed210",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "## Mapping, analyzing, and classifying data for delivery to the AI agent",
+        "height": 288,
+        "width": 1728,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [192, -80],
+      "id": "daa20d29-6a7f-4855-b06d-5e30cad39d28",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## All data manipulation in only one node\n",
+        "height": 208,
+        "width": 464
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [832, 304],
+      "id": "1c365e83-39a9-46d5-bf17-4d060ab7ebe4",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('input_data').item.json.sessionId }}",
+        "contextWindowLength": 9
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [2160, 304],
+      "id": "2208dcef-ea81-4b9f-ba7e-1965be1ccf4a",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "g7GndQZMGv7EYjej",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Debounce redis \nIn this part of the automation we will implement debounce to handle multiple messages in a period of time.",
+        "height": 688,
+        "width": 880,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-736, 64],
+      "id": "fc564846-233a-4ce8-a8bf-91f02a63db06",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Geathering data \nIn this part of the automation, we will standardize the data to convert it into a common input-agnostic model (Telegram, WhatsApp, webhook, etc.)\n\n\n\n\n\n\n\n",
+        "height": 320,
+        "width": 848
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1632, 304],
+      "id": "cc183f5e-5619-4b2e-8170-cca5cd41b0d0",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-1824, 432],
+      "id": "b1e3452a-5a61-46a6-b9b7-f7518b63bb8b",
+      "name": "Telegram Trigger",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('input_data').item.json.input }}",
+        "options": {
+          "systemMessage": "=# 🔹 Rol del agente\n\nEres un **agente administrativo de registro y seguimiento**, tu **única función** es **llenar y actualizar un Google Sheet** usando exclusivamente la tool **`Seguimiento`**.\n\n🚫 **No conversas con el cliente**\n🚫 **No haces ventas**\n🚫 **No haces preguntas**\n🚫 **No inventas información**\n\nSolo analizas los **mensajes del cliente** y **actualizas los campos del Sheet según reglas estrictas**.\n\n---\n\n## 🔹 Fuente de información\n\n* Toda la información proviene **exclusivamente de los mensajes del cliente**.\n* Usa **memoria** para identificar si el cliente **ya existe** o es **un nuevo contacto**.\n* La fecha actual debe usarse en formato **DD/MM** cuando se requiera.\n* ESTA ES LA FECHA ACTUAL PARA CUANDO NECESITES: {{ $('Date & Time').item.json.currentDate }}\n\n---\n\n## 🔹 Reglas generales (OBLIGATORIAS)\n\n1. **Nunca sobrescribas información histórica**, excepto cuando se indique explícitamente.\n2. **Nunca alteres campos bloqueados**.\n3. **Siempre actualiza la “Fecha de último contacto del cliente”** cada vez que llegue un mensaje.\n4. Si un dato **no está explícito**, infiere solo si es **lógico y evidente**; de lo contrario, deja el campo vacío.\n5. Usa **MAYÚSCULAS sostenidas** en OBSERVACIONES.\n6. El canal de comunicación **SIEMPRE es WHATSAPP**.\n\n---\n\n## 🔹 Lógica de detección del cliente\n\n* **Cliente nuevo**: No existe registro previo → crear nueva fila.\n* **Cliente existente**: Ya tiene fila → solo actualizar campos permitidos.\n\n---\n\n## 🧩 Llenado de columnas (REGLAS EXACTAS)\n\n### 📅 Fecha Inicio\n\n* **Cliente nuevo**: fecha del primer mensaje.\n* **Cliente existente**: ❌ **NO MODIFICAR**.\n* **FECHA ACTUAL**: {{ $('Date & Time').item.json.currentDate }}\n\n---\n\n### 👤 Nombre del cliente\n\n* Tomar del mensaje si está disponible.\n* Si no aparece explícitamente, mantener el existente.\n\n---\n\n### 📌 Estado (obligatorio)\n\nAsignar **solo uno** según el contexto:\n\n* **NO REQUIERE EL SERVICIO** → el cliente rechaza o dice que no necesita.\n* **CONTRATADO** → acepta el servicio o confirma pago.\n* **SIN INTERACCIÓN** → deja de responder tras contacto inicial.\n* **PROCESO** → solicita información, cotización o está evaluando.\n\n---\n\n### 📝 Detalle\n\nCompletar según lo solicitado por el cliente.\nEjemplos válidos:\n\n```\nFORMATOS\nMANUAL\nCORRECCIONES\nCAP1, CAP2, CAP3\nINFORMACION\nTESIS\nDIAPOSITIVAS\n```\n\nPuede combinar varios si aplica.\n\n---\n\n### 🗒️ Observacion (PRIMER CONTACTO)\n\n* **Solo se llena una vez**.\n* Resume el primer contacto.\n\n**Formato obligatorio:**\n\n```\nDD/MM SE LE ABORDA POR WHATSAPP PARA VERIFICAR EL SERVICIO QUE REQUIERE\n```\n\n❌ No modificar nunca después.\n\n---\n\n### 🗒️ Observacion 1\n\n* Solo llenar si:\n\n  * El cliente **ya existe**\n  * **Observacion** ya está llena\n* ❌ No modificar Observacion.\n\nEjemplo:\n\n```\nDD/MM SE DA SEGUIMIENTO AL CLIENTE, INDICA QUE VA A PENSAR LA PROPUESTA\n```\n\n---\n\n### 🗒️ Observacion 2\n\n* Solo llenar si:\n\n  * Observacion y Observacion 1 ya existen\n* ❌ No modificar campos anteriores.\n\nEjemplo:\n\n```\nDD/MM SE INTENTA CONTACTO NUEVAMENTE, SIN RESPUESTA DEL CLIENTE\n```\n\n---\n\n### 🗒️ Observacion 3\n\n*(Nota: aunque esté repetido como “Observacion 2”, este es el cuarto contacto)*\n\n* Solo llenar si:\n\n  * Observacion, Observacion 1 y Observacion 2 existen\n* ❌ No modificar ningún campo anterior.\n\nEjemplo:\n\n```\nDD/MM SE CONSULTA AL CLIENTE POR RESPUESTA FINAL, SIN OBTENER RESPUESTA\n```\n\n---\n\n### 📆 Fecha de último contacto del cliente\n\n✅ **SIEMPRE actualizar** con la fecha del último mensaje recibido.\n\n---\n\n### 🎓 Universidad\n\n* Tomar del mensaje del cliente.\n* No inventar.\n\n---\n\n### 📚 Especialidad\n\n* Carrera o programa académico indicado por el cliente.\n\n---\n\n### 💰 Cotización Inicial\n\n* Primer valor ofrecido al cliente.\n* ❌ No modificar nunca después.\n\n---\n\n### 💵 Cotización Final\n\n* Valor final acordado.\n* ❌ No alterar “Cotización Inicial”.\n\n---\n\n### 📲 Canal de comunicación\n\n* **SIEMPRE:** `WHATSAPP`\n\n---\n\n### 🌍 Ciudad\n\n* Ciudad indicada por el cliente.\n* No inferir sin evidencia clara.\n\n---\n\n### 🚫 Campos prohibidos\n\n* **Segmento auxiliar 1**\n* **Segmento auxiliar 2**\n\n❌ **Nunca llenar estos campos.**\n\n---\n\n## 🔹 Uso de la tool\n\nCuando tengas los datos procesados:\n\n* Ejecuta **solo** la tool **`Seguimiento`**\n* Envía **únicamente los campos que deban crearse o actualizarse**\n* No agregues texto adicional"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [2912, 48],
+      "id": "858fd45f-07ec-430a-b2d7-9c85c040d874",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [2800, 256],
+      "id": "05a9f8a9-742c-4453-9057-77484c7aa01d",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('input_data').item.json.sessionId }}",
+        "contextWindowLength": 9
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [2960, 224],
+      "id": "5402db2e-995a-458d-8437-45e9e1969710",
+      "name": "Redis Chat Memory1",
+      "credentials": {
+        "redis": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nª": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('N_', ``, 'string') }}",
+            "FECHA DE INICIO": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('FECHA_DE_INICIO', ``, 'string') }}",
+            "NOMBRE DEL CLIENTE": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('NOMBRE_DEL_CLIENTE', ``, 'string') }}",
+            "ESTADO": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ESTADO', ``, 'string') }}",
+            "DETALLE": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('DETALLE', ``, 'string') }}",
+            "OBSERVACIÓN": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('OBSERVACI_N', ``, 'string') }}",
+            "OBSERVACIÓN 1": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('OBSERVACI_N_1', ``, 'string') }}",
+            "OBSERVACIÓN 2": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('OBSERVACI_N_2', ``, 'string') }}",
+            "OBSERVACIÓN 3": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('OBSERVACI_N_3', ``, 'string') }}",
+            "FECHA DE ÚLTIMO CONTACTO CON EL CLIENTE": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('FECHA_DE__LTIMO_CONTACTO_CON_EL_CLIENTE', ``, 'string') }}",
+            "SEGUIMIENTO AUXILIAR 1 (ALEXANDRA)": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('SEGUIMIENTO_AUXILIAR_1__ALEXANDRA_', ``, 'string') }}",
+            "SEGUIMIENTO AUXILIAR 2": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('SEGUIMIENTO_AUXILIAR_2', ``, 'string') }}",
+            "UNIVERSIDAD": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('UNIVERSIDAD', ``, 'string') }}",
+            "ESPECIALIDAD": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ESPECIALIDAD', ``, 'string') }}",
+            "COTIZACIÓN INICIAL ($)": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('COTIZACI_N_INICIAL____', ``, 'string') }}",
+            "COTIZACION FINAL ($)": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('COTIZACION_FINAL____', ``, 'string') }}",
+            "CANAL DE COMUNIC.": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('CANAL_DE_COMUNIC_', ``, 'string') }}",
+            "MEDIO PUBLICITARIO": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('MEDIO_PUBLICITARIO', ``, 'string') }}",
+            "DETALLE DE PUBLICIDAD": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('DETALLE_DE_PUBLICIDAD', ``, 'string') }}",
+            "2DO MEDIO PUBLICITARIO": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('2DO_MEDIO_PUBLICITARIO', ``, 'string') }}",
+            "CIUDAD": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('CIUDAD', ``, 'string') }}",
+            "CORREO ELECTRONICO": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('CORREO_ELECTRONICO', ``, 'string') }}",
+            "REVISION": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('REVISION', ``, 'string') }}",
+            "NUMERO DEL CLIENTE": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+          },
+          "matchingColumns": ["NUMERO DEL CLIENTE"],
+          "schema": [
+            {
+              "id": "Nª",
+              "displayName": "Nª",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FECHA DE INICIO",
+              "displayName": "FECHA DE INICIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NUMERO DEL CLIENTE",
+              "displayName": "NUMERO DEL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE DEL CLIENTE",
+              "displayName": "NOMBRE DEL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ESTADO",
+              "displayName": "ESTADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DETALLE",
+              "displayName": "DETALLE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OBSERVACIÓN",
+              "displayName": "OBSERVACIÓN",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OBSERVACIÓN 1",
+              "displayName": "OBSERVACIÓN 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OBSERVACIÓN 2",
+              "displayName": "OBSERVACIÓN 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OBSERVACIÓN 3",
+              "displayName": "OBSERVACIÓN 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FECHA DE ÚLTIMO CONTACTO CON EL CLIENTE",
+              "displayName": "FECHA DE ÚLTIMO CONTACTO CON EL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SEGUIMIENTO AUXILIAR 1 (ALEXANDRA)",
+              "displayName": "SEGUIMIENTO AUXILIAR 1 (ALEXANDRA)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SEGUIMIENTO AUXILIAR 2",
+              "displayName": "SEGUIMIENTO AUXILIAR 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UNIVERSIDAD",
+              "displayName": "UNIVERSIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ESPECIALIDAD",
+              "displayName": "ESPECIALIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "COTIZACIÓN INICIAL ($)",
+              "displayName": "COTIZACIÓN INICIAL ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "COTIZACION FINAL ($)",
+              "displayName": "COTIZACION FINAL ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CANAL DE COMUNIC.",
+              "displayName": "CANAL DE COMUNIC.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "MEDIO PUBLICITARIO",
+              "displayName": "MEDIO PUBLICITARIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DETALLE DE PUBLICIDAD",
+              "displayName": "DETALLE DE PUBLICIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "2DO MEDIO PUBLICITARIO",
+              "displayName": "2DO MEDIO PUBLICITARIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CIUDAD",
+              "displayName": "CIUDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CORREO ELECTRONICO",
+              "displayName": "CORREO ELECTRONICO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "REVISION",
+              "displayName": "REVISION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [3088, 240],
+      "id": "8cf1096f-8e3d-4e26-ab27-e5323e24648c",
+      "name": "Seguimiento",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gc0wt3iZ2TAufIrK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3408, 48],
+      "id": "bdab5b1c-7340-4a79-864a-3a27cefb5715",
+      "name": "Send a text message",
+      "webhookId": "",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "NUMERO DEL CLIENTE": "={{ $('input_data').item.json.sessionId }}"
+          },
+          "matchingColumns": ["NUMERO DEL CLIENTE"],
+          "schema": [
+            {
+              "id": "Nª",
+              "displayName": "Nª",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FECHA DE INICIO",
+              "displayName": "FECHA DE INICIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NUMERO DEL CLIENTE",
+              "displayName": "NUMERO DEL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE DEL CLIENTE",
+              "displayName": "NOMBRE DEL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ESTADO",
+              "displayName": "ESTADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DETALLE",
+              "displayName": "DETALLE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACIÓN",
+              "displayName": "OBSERVACIÓN",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACIÓN 1",
+              "displayName": "OBSERVACIÓN 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACIÓN 2",
+              "displayName": "OBSERVACIÓN 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACIÓN 3",
+              "displayName": "OBSERVACIÓN 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FECHA DE ÚLTIMO CONTACTO CON EL CLIENTE",
+              "displayName": "FECHA DE ÚLTIMO CONTACTO CON EL CLIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SEGUIMIENTO AUXILIAR 1 (ALEXANDRA)",
+              "displayName": "SEGUIMIENTO AUXILIAR 1 (ALEXANDRA)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SEGUIMIENTO AUXILIAR 2",
+              "displayName": "SEGUIMIENTO AUXILIAR 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UNIVERSIDAD",
+              "displayName": "UNIVERSIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ESPECIALIDAD",
+              "displayName": "ESPECIALIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "COTIZACIÓN INICIAL ($)",
+              "displayName": "COTIZACIÓN INICIAL ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "COTIZACION FINAL ($)",
+              "displayName": "COTIZACION FINAL ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CANAL DE COMUNIC.",
+              "displayName": "CANAL DE COMUNIC.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MEDIO PUBLICITARIO",
+              "displayName": "MEDIO PUBLICITARIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DETALLE DE PUBLICIDAD",
+              "displayName": "DETALLE DE PUBLICIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "2DO MEDIO PUBLICITARIO",
+              "displayName": "2DO MEDIO PUBLICITARIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CIUDAD",
+              "displayName": "CIUDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CORREO ELECTRONICO",
+              "displayName": "CORREO ELECTRONICO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "REVISION",
+              "displayName": "REVISION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2640, 48],
+      "id": "679ba2cf-4a49-4041-9b85-e3bfc06c09c0",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [1984, 48],
+      "id": "0c741606-16dd-4b6e-b9ce-16c2ee3bf889",
+      "name": "Date & Time"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Promociones": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clientes": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "set_current_date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "debounce_data": {
+      "main": [
+        [
+          {
+            "node": "push_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "map_data": {
+      "main": [
+        [
+          {
+            "node": "debounce_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_current_date": {
+      "main": [
+        [
+          {
+            "node": "map_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getData1": {
+      "main": [
+        [
+          {
+            "node": "message_condition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "getData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "push_data": {
+      "main": [
+        [
+          {
+            "node": "getData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "message_condition": {
+      "main": [
+        [
+          {
+            "node": "delete_key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no_operation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no_operation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "delete_key": {
+      "main": [
+        [
+          {
+            "node": "splitOut1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "input_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "join_messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "splitOut1": {
+      "main": [
+        [
+          {
+            "node": "parse_json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse_json": {
+      "main": [
+        [
+          {
+            "node": "set_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_message": {
+      "main": [
+        [
+          {
+            "node": "Sort1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "join_messages": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "input_data": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seguimiento": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ab01f4c6-44a1-4952-a79c-39a9f4c68a2f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": ""
+  },
+  "id": "iiBjpv5MmnhiW2EH2MFsw",
+  "tags": []
+}
